@@ -2,6 +2,8 @@ const fastify = require('fastify')({
   logger: true
 })
 
+fastify.register(require('@fastify/formbody'))
+
 // Declare a route
 
 const localHomeAssistant = process.env.LOCAL_HOME_ASSASSIN_URL || 'http://homeassistant.local:8123'
