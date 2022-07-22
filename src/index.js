@@ -13,7 +13,7 @@ fastify.get('/auth/authorize', (request, reply) => {
   reply.redirect(`${localHomeAssistant}${request.url}`);
 })
 
-fastify.post('*', function (request, reply) {
+fastify.post('/auth/token', function (request, reply) {
   console.log('Client IP', request.ip);
   console.log('Method:', request.method)
   console.log('URL: ', request.url);
