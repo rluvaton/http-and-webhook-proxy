@@ -1,0 +1,27 @@
+{
+  "name": "http-and-webhook-proxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rluvaton/http-and-webhook-proxy.git"
+  },
+  "keywords": [],
+  "author": "Raz Luvaton",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rluvaton/http-and-webhook-proxy/issues"
+  },
+  "homepage": "https://github.com/rluvaton/http-and-webhook-proxy#readme",
+  "dependencies": {
+    "fastify": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.6"
+  }
+}
