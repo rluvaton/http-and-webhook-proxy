@@ -18,7 +18,7 @@ fastify.all('*', function (request, reply) {
 const port = process.env.PORT || 3000;
 
 // Run the server!
-fastify.listen({ port }, function (err, address) {
+fastify.listen({ host: '0.0.0.0', port }, function (err, address) {
   if (err) {
     fastify.log.error(err)
     process.exit(1)
