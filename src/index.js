@@ -15,7 +15,7 @@ fastify.all('*', function (request, reply) {
   reply.send({ hello: 'world' });
 });
 
-const port = parseInt(process.env.PORT, 10) || 3000;
+const port = process.env.PORT || 3000;
 
 // Run the server!
 fastify.listen({ port }, function (err, address) {
