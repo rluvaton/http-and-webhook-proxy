@@ -13,6 +13,21 @@ fastify.get('/auth/authorize', (request, reply) => {
   reply.redirect(`${localHomeAssistant}${request.url}`);
 })
 
+fastify.post('*', function (request, reply) {
+  console.log('Client IP', request.ip);
+  console.log('Method:', request.method)
+  console.log('URL: ', request.url);
+  console.log('Headers:', request.headers);
+  console.log('Body:', request.body);
+  console.log('Cookies:', request.cookies);
+
+
+  console.log('redirect to local home assistant');
+
+  // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
+  reply.redirect(307, `${localHomeAssistant}${request.url}`);
+});
+
 fastify.all('*', function (request, reply) {
   console.log('Client IP', request.ip);
   console.log('Method:', request.method)
@@ -23,9 +38,8 @@ fastify.all('*', function (request, reply) {
 
 
   console.log('redirect to local home assistant');
-  reply.redirect(`${localHomeAssistant}${request.url}`);
 
-  // reply.send({ hello: 'world' });
+  reply.redirect(`${localHomeAssistant}${request.url}`);
 });
 
 const port = process.env.PORT || 3000;
