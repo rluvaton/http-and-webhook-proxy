@@ -21,7 +21,11 @@ fastify.all('*', function (request, reply) {
   console.log('Body:', request.body);
   console.log('Cookies:', request.cookies);
 
-  reply.send({ hello: 'world' });
+
+  console.log('redirect to local home assistant');
+  reply.redirect(`${localHomeAssistant}${request.url}`);
+
+  // reply.send({ hello: 'world' });
 });
 
 const port = process.env.PORT || 3000;
