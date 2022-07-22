@@ -4,6 +4,13 @@ const fastify = require('fastify')({
 
 // Declare a route
 
+const localHomeAssistant = process.env.LOCAL_HOME_ASSASSIN_URL || 'http://homeassistant.local:8123'
+
+fastify.get('/auth/authorize', (request, reply) => {
+  // The url contains the query parameters and the path without the domain
+  reply.redirect(`${localHomeAssistant}${request.url}`);
+})
+
 fastify.all('*', function (request, reply) {
   console.log('Client IP', request.ip);
   console.log('Method:', request.method)
