@@ -20,6 +20,7 @@ fastify.register(require('@fastify/http-proxy'), {
     onResponse: (request, reply, res) => {
       let resStream = res;
 
+      // Or use the example in https://nodejs.org/api/zlib.html#compressing-http-requests-and-responses for supporting other content encoding
       if (reply.getHeader('content-encoding') === 'deflate') {
         const inflate = createInflate();
         res.pipe(inflate);
@@ -49,6 +50,18 @@ fastify.register(require('@fastify/http-proxy'), {
 
 // Added body logging
 fastify.addHook('preValidation', async (req) => {
+  if (!req.body) {
+    req.log.info({
+      method: req.method,
+      url: req.url,
+      path: req.routerPath,
+      parameters: req.params,
+      headers: req.headers,
+    });
+
+    return;
+  }
+
   let isLogBodyEnabled = false;
 
   // Waiting for data listener and only then listen to body logging,
