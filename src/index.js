@@ -1,4 +1,6 @@
 const { Readable } = require('stream');
+const qs = require('qs');
+
 
 const fastify = require('fastify')({
   // TODO - remove this after finish of the development, pino-pretty is not very performant
@@ -148,6 +150,10 @@ declareRoutes();
 
 function proxyHttpRequestToWs(request, reply) {
   return new Promise((resolve, reject) => {
+    let body = request.body;
+    if(request.headers['content-type'] === 'application/x-www-form-urlencoded') {
+      body = qs.stringify(body);
+    }
     fastify.io.timeout(10000).emit(`request-${request.id}`, {
       id: request.id,
       method: request.method,
@@ -155,7 +161,7 @@ function proxyHttpRequestToWs(request, reply) {
       path: request.routerPath,
       params: request.params,
       headers: request.headers,
-      body: request.body,
+      body: body,
     }, (err, [response]) => {
       if (err) {
         reject(err);
@@ -180,7 +186,7 @@ function declareRoutes() {
   })
 
   fastify.post('/auth/token', async function (request, reply) {
-    // await proxyHttpRequestToWs(request, reply);
+    await proxyHttpRequestToWs(request, reply);
 
     console.log('Client IP', request.ip);
     console.log('Method:', request.method)
@@ -193,7 +199,7 @@ function declareRoutes() {
     console.log('redirect to local home assistant');
 
     // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
-    reply.redirect(307, `${localHomeAssistant}${request.url}`);
+    // reply.redirect(307, `${localHomeAssistant}${request.url}`);
   });
 
 
