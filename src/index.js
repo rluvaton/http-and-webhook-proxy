@@ -1,4 +1,5 @@
 const { createInflate } = require('zlib');
+const { Readable } = require('stream');
 
 const fastify = require('fastify')({
   // TODO - remove this after finish of the development, pino-pretty is not very performant
@@ -50,13 +51,20 @@ fastify.register(require('@fastify/http-proxy'), {
 
 // Added body logging
 fastify.addHook('preValidation', async (req) => {
-  if (!req.body) {
+  console.log(typeof req.body, req.body?.on)
+
+  const baseRequestMetadata = {
+    method: req.method,
+    url: req.url,
+    path: req.routerPath,
+    parameters: req.params,
+    headers: req.headers,
+  };
+
+  if (!(req.body instanceof Readable)) {
     req.log.info({
-      method: req.method,
-      url: req.url,
-      path: req.routerPath,
-      parameters: req.params,
-      headers: req.headers,
+      ...baseRequestMetadata,
+      body: req.body,
     });
 
     return;
@@ -79,11 +87,7 @@ fastify.addHook('preValidation', async (req) => {
     getBody(req, req.body)
       .then((body) => {
         req.log.info({
-          method: req.method,
-          url: req.url,
-          path: req.routerPath,
-          parameters: req.params,
-          headers: req.headers,
+          ...baseRequestMetadata,
           body,
         });
       });
