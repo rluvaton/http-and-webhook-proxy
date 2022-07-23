@@ -12,6 +12,11 @@ const fastify = require('fastify')({
 
 const localHomeAssistant = process.env.LOCAL_HOME_ASSASSIN_URL || 'http://homeassistant.local:8123'
 
+
+fastify.register(require('fastify-socket.io'), {
+  // put your options here
+})
+
 // Must be before the addHook as it will have problems otherwise
 // fastify.register(require('@fastify/http-proxy'), {
 //   upstream: localHomeAssistant,
@@ -142,13 +147,35 @@ fastify.register(require('@fastify/formbody'));
 
 declareRoutes();
 
+function proxyHttpRequestToWs(request, reply) {
+  fastify.io.timeout(10000).emit(`request-${request.id}`, {
+    id: request.id,
+    method: request.method,
+    url: request.url,
+    path: request.routerPath,
+    params: request.params,
+    headers: request.headers,
+    body: request.body,
+  }, (err, [response]) => {
+    console.log('################'); // "got it"
+    console.log({err, response}); // "got it"
+
+    reply.status(response.status).headers(response.headers).send(response.data);
+    // response.
+  });
+}
+
 function declareRoutes() {
   fastify.get('/auth/authorize', (request, reply) => {
+    proxyHttpRequestToWs(request, reply);
+
     // The url contains the query parameters and the path without the domain
-    reply.redirect(`${localHomeAssistant}${request.url}`);
+    // reply.redirect(`${localHomeAssistant}${request.url}`);
   })
 
   fastify.post('/auth/token', function (request, reply) {
+    proxyHttpRequestToWs(request, reply);
+
     console.log('Client IP', request.ip);
     console.log('Method:', request.method)
     console.log('URL: ', request.url);
@@ -160,11 +187,13 @@ function declareRoutes() {
     console.log('redirect to local home assistant');
 
     // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
-    reply.redirect(307, `${localHomeAssistant}${request.url}`);
+    // reply.redirect(307, `${localHomeAssistant}${request.url}`);
   });
 
 
   fastify.all('*', function (request, reply) {
+    proxyHttpRequestToWs(request, reply);
+
     console.log('Client IP', request.ip);
     console.log('Method:', request.method)
     console.log('URL: ', request.url);
@@ -173,9 +202,9 @@ function declareRoutes() {
     console.log('Cookies:', request.cookies);
 
 
-    console.log('redirect to local home assistant');
+    // console.log('redirect to local home assistant');
 
-    reply.redirect(`${localHomeAssistant}${request.url}`);
+    // reply.redirect(`${localHomeAssistant}${request.url}`);
   });
 }
 
