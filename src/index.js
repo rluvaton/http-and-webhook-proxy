@@ -148,33 +148,40 @@ fastify.register(require('@fastify/formbody'));
 declareRoutes();
 
 function proxyHttpRequestToWs(request, reply) {
-  fastify.io.timeout(10000).emit(`request-${request.id}`, {
-    id: request.id,
-    method: request.method,
-    url: request.url,
-    path: request.routerPath,
-    params: request.params,
-    headers: request.headers,
-    body: request.body,
-  }, (err, [response]) => {
-    console.log('################'); // "got it"
-    console.log({err, response}); // "got it"
+  return new Promise((resolve, reject) => {
+    fastify.io.timeout(10000).emit(`request-${request.id}`, {
+      id: request.id,
+      method: request.method,
+      url: request.url,
+      path: request.routerPath,
+      params: request.params,
+      headers: request.headers,
+      body: request.body,
+    }, (err, [response]) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      console.log('################'); // "got it"
+      console.log({ err, response }); // "got it"
 
-    reply.status(response.status).headers(response.headers).send(response.data);
-    // response.
+      reply.status(response.status).headers(response.headers).send(response.data);
+      // response.
+      resolve();
+    });
   });
 }
 
+
 function declareRoutes() {
   fastify.get('/auth/authorize', (request, reply) => {
-    proxyHttpRequestToWs(request, reply);
 
     // The url contains the query parameters and the path without the domain
-    // reply.redirect(`${localHomeAssistant}${request.url}`);
+    reply.redirect(`${localHomeAssistant}${request.url}`);
   })
 
-  fastify.post('/auth/token', function (request, reply) {
-    proxyHttpRequestToWs(request, reply);
+  fastify.post('/auth/token', async function (request, reply) {
+    await proxyHttpRequestToWs(request, reply);
 
     console.log('Client IP', request.ip);
     console.log('Method:', request.method)
@@ -191,8 +198,8 @@ function declareRoutes() {
   });
 
 
-  fastify.all('*', function (request, reply) {
-    proxyHttpRequestToWs(request, reply);
+  fastify.all('*', async function (request, reply) {
+    await proxyHttpRequestToWs(request, reply);
 
     console.log('Client IP', request.ip);
     console.log('Method:', request.method)
