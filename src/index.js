@@ -1,4 +1,3 @@
-const { createInflate } = require('zlib');
 const { Readable } = require('stream');
 
 const fastify = require('fastify')({
@@ -82,7 +81,7 @@ fastify.addHook('preValidation', async (req) => {
   // As I'm thinking that maybe HTTP incoming messages start pushing to the data event as soon as there is 1 listener
   // If we listen to it first Fastify will not get the body, so we will wait for it to first listen
   // Listening in the newListener is not dangerous, as it called synchronously, so we won't miss the data
-  req.body.on('newListener', (event, listener) => {
+  req.body.on('newListener', (event) => {
     if (event !== 'data' || isLogBodyEnabled) {
       return;
     }
@@ -181,7 +180,7 @@ function declareRoutes() {
   })
 
   fastify.post('/auth/token', async function (request, reply) {
-    await proxyHttpRequestToWs(request, reply);
+    // await proxyHttpRequestToWs(request, reply);
 
     console.log('Client IP', request.ip);
     console.log('Method:', request.method)
@@ -194,7 +193,7 @@ function declareRoutes() {
     console.log('redirect to local home assistant');
 
     // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
-    // reply.redirect(307, `${localHomeAssistant}${request.url}`);
+    reply.redirect(307, `${localHomeAssistant}${request.url}`);
   });
 
 
@@ -218,7 +217,7 @@ function declareRoutes() {
 const port = process.env.PORT || 3000;
 
 // Run the server!
-fastify.listen({ host: '0.0.0.0', port }, function (err, address) {
+fastify.listen({ host: '0.0.0.0', port }, function (err) {
   if (err) {
     fastify.log.error(err)
     process.exit(1)
