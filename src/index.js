@@ -13,40 +13,40 @@ const fastify = require('fastify')({
 const localHomeAssistant = process.env.LOCAL_HOME_ASSASSIN_URL || 'http://homeassistant.local:8123'
 
 // Must be before the addHook as it will have problems otherwise
-fastify.register(require('@fastify/http-proxy'), {
-  upstream: localHomeAssistant,
-
-  replyOptions: {
-    // For debugging, this can have memory leak and more problems
-    onResponse: (request, reply, res) => {
-      let resStream = res;
-
-      // Or use the example in https://nodejs.org/api/zlib.html#compressing-http-requests-and-responses for supporting other content encoding
-      if (reply.getHeader('content-encoding') === 'deflate') {
-        const inflate = createInflate();
-        res.pipe(inflate);
-        resStream = inflate;
-      }
-
-      getBody(reply, resStream)
-        .then((body) => {
-          reply.log.info({
-            status: reply.statusCode,
-            headers: reply.getHeaders(),
-            body,
-          });
-        });
-
-
-      // Keep the default response
-      reply.send(res);
-    },
-  },
-  // logLevel: 'trace'
-
-  // prefix: '/', // optional
-  // http2: false // optional
-});
+// fastify.register(require('@fastify/http-proxy'), {
+//   upstream: localHomeAssistant,
+//
+//   replyOptions: {
+//     // For debugging, this can have memory leak and more problems
+//     onResponse: (request, reply, res) => {
+//       let resStream = res;
+//
+//       // Or use the example in https://nodejs.org/api/zlib.html#compressing-http-requests-and-responses for supporting other content encoding
+//       if (reply.getHeader('content-encoding') === 'deflate') {
+//         const inflate = createInflate();
+//         res.pipe(inflate);
+//         resStream = inflate;
+//       }
+//
+//       getBody(reply, resStream)
+//         .then((body) => {
+//           reply.log.info({
+//             status: reply.statusCode,
+//             headers: reply.getHeaders(),
+//             body,
+//           });
+//         });
+//
+//
+//       // Keep the default response
+//       reply.send(res);
+//     },
+//   },
+//   // logLevel: 'trace'
+//
+//   // prefix: '/', // optional
+//   // http2: false // optional
+// });
 
 
 // Added body logging
@@ -137,10 +137,10 @@ function getBody(reqOrRes, bodyStream) {
 }
 
 
-// fastify.register(require('@fastify/formbody'));
+fastify.register(require('@fastify/formbody'));
 // Declare a route
 
-// declareRoutes();
+declareRoutes();
 
 function declareRoutes() {
   fastify.get('/auth/authorize', (request, reply) => {
