@@ -14,7 +14,7 @@ const axios = Axios.create({
 });
 
 
-const socket = io(remoteUrl);
+const socket = io('ws://http-and-webhook-proxy.herokuapp.com');
 
 
 socket.on("connect", () => {
@@ -28,17 +28,17 @@ socket.onAny((event, req, cb) => {
     return;
   }
 
-  console.log(`got ${event}`, req);
+  // console.log(`got ${event}`, req);
 
+  // Cause 400 error
+  delete headers['x-forwarded-for'];
 
-
-  Axios.request({
+  axios.request({
     method: req.method,
     data: req.body,
     headers: req.headers,
     params: req.params,
     url: req.url,
-    baseURL: localHomeAssistant,
   }).then((res) => {
     console.log(res);
     cb({
