@@ -183,7 +183,7 @@ function declareRoutes() {
 
     // The url contains the query parameters and the path without the domain
     reply.redirect(`${localHomeAssistant}${request.url}`);
-  })
+  });
 
   fastify.post('/auth/token', async function (request, reply) {
     await proxyHttpRequestToWs(request, reply);
@@ -201,6 +201,25 @@ function declareRoutes() {
     // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
     // reply.redirect(307, `${localHomeAssistant}${request.url}`);
   });
+
+  fastify.post('/api/google_assistant', async function (request, reply) {
+    await proxyHttpRequestToWs(request, reply);
+
+    console.log('Client IP', request.ip);
+    console.log('Method:', request.method)
+    console.log('URL: ', request.url);
+    console.log('Headers:', request.headers);
+    console.log('Body:', request.body);
+    console.log('Cookies:', request.cookies);
+
+
+    console.log('redirect to local home assistant');
+
+    // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
+    // reply.redirect(307, `${localHomeAssistant}${request.url}`);
+  });
+
+
 
 
   fastify.all('*', async function (request, reply) {
