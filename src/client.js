@@ -31,7 +31,7 @@ socket.onAny((event, req, cb) => {
   // console.log(`got ${event}`, req);
 
   // Cause 400 error
-  delete headers['x-forwarded-for'];
+  delete req.headers['x-forwarded-for'];
 
   axios.request({
     method: req.method,
