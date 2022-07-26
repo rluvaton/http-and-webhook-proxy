@@ -1,15 +1,22 @@
 const { Readable } = require('stream');
 const qs = require('qs');
 
+const urlPrefix = process.env.URL_PREFIX || '';
 
 const fastify = require('fastify')({
-  // TODO - remove this after finish of the development, pino-pretty is not very performant
   logger: {
-    transport: {
-      target: 'pino-pretty',
-    },
+    ...(process.env.NODE_ENV === 'production' ? {} : {
+      transport: {
+        target: 'pino-pretty',
+      },
+    }),
   },
 });
+
+fastify.register(import('@fastify/rate-limit'), {
+  max: 1000,
+  timeWindow: '1 minute',
+})
 
 const localHomeAssistant = process.env.LOCAL_HOME_ASSASSIN_URL || 'http://homeassistant.local:8123'
 
@@ -18,87 +25,53 @@ fastify.register(require('fastify-socket.io'), {
   // put your options here
 })
 
-// Must be before the addHook as it will have problems otherwise
-// fastify.register(require('@fastify/http-proxy'), {
-//   upstream: localHomeAssistant,
-//
-//   replyOptions: {
-//     // For debugging, this can have memory leak and more problems
-//     onResponse: (request, reply, res) => {
-//       let resStream = res;
-//
-//       // Or use the example in https://nodejs.org/api/zlib.html#compressing-http-requests-and-responses for supporting other content encoding
-//       if (reply.getHeader('content-encoding') === 'deflate') {
-//         const inflate = createInflate();
-//         res.pipe(inflate);
-//         resStream = inflate;
-//       }
-//
-//       getBody(reply, resStream)
-//         .then((body) => {
-//           reply.log.info({
-//             status: reply.statusCode,
-//             headers: reply.getHeaders(),
-//             body,
-//           });
-//         });
-//
-//
-//       // Keep the default response
-//       reply.send(res);
-//     },
-//   },
-//   // logLevel: 'trace'
-//
-//   // prefix: '/', // optional
-//   // http2: false // optional
-// });
-
+if (process.env.NODE_ENV !== 'production') {
 
 // Added body logging
-fastify.addHook('preValidation', async (req) => {
-  console.log(typeof req.body, req.body?.on)
+  fastify.addHook('preValidation', async (req) => {
+    console.log(typeof req.body, req.body?.on)
 
-  const baseRequestMetadata = {
-    method: req.method,
-    url: req.url,
-    path: req.routerPath,
-    parameters: req.params,
-    headers: req.headers,
-  };
+    const baseRequestMetadata = {
+      method: req.method,
+      url: req.url,
+      path: req.routerPath,
+      parameters: req.params,
+      headers: req.headers,
+    };
 
-  if (!(req.body instanceof Readable)) {
-    req.log.info({
-      ...baseRequestMetadata,
-      body: req.body,
-    });
+    if (!(req.body instanceof Readable)) {
+      req.log.info({
+        ...baseRequestMetadata,
+        body: req.body,
+      });
 
-    return;
-  }
-
-  let isLogBodyEnabled = false;
-
-  // Waiting for data listener and only then listen to body logging,
-  // this is done, so we won't take the data from the body original listener (fastify)
-  // As I'm thinking that maybe HTTP incoming messages start pushing to the data event as soon as there is 1 listener
-  // If we listen to it first Fastify will not get the body, so we will wait for it to first listen
-  // Listening in the newListener is not dangerous, as it called synchronously, so we won't miss the data
-  req.body.on('newListener', (event) => {
-    if (event !== 'data' || isLogBodyEnabled) {
       return;
     }
 
-    isLogBodyEnabled = true;
+    let isLogBodyEnabled = false;
 
-    getBody(req, req.body)
-      .then((body) => {
-        req.log.info({
-          ...baseRequestMetadata,
-          body,
+    // Waiting for data listener and only then listen to body logging,
+    // this is done, so we won't take the data from the body original listener (fastify)
+    // As I'm thinking that maybe HTTP incoming messages start pushing to the data event as soon as there is 1 listener
+    // If we listen to it first Fastify will not get the body, so we will wait for it to first listen
+    // Listening in the newListener is not dangerous, as it called synchronously, so we won't miss the data
+    req.body.on('newListener', (event) => {
+      if (event !== 'data' || isLogBodyEnabled) {
+        return;
+      }
+
+      isLogBodyEnabled = true;
+
+      getBody(req, req.body)
+        .then((body) => {
+          req.log.info({
+            ...baseRequestMetadata,
+            body,
+          });
         });
-      });
-  })
-});
+    })
+  });
+}
 
 
 function getBody(reqOrRes, bodyStream) {
@@ -142,22 +115,49 @@ function getBody(reqOrRes, bodyStream) {
   });
 }
 
+function removeSpecialPrefixFromUrl(url) {
+  if(urlPrefix === '') {
+    return url;
+  }
+
+  if(url.startsWith(`/${urlPrefix}`)) {
+    return url.substring(`/${urlPrefix}`.length);
+  }
+
+  return url;
+}
+
 
 fastify.register(require('@fastify/formbody'));
-// Declare a route
 
-declareRoutes();
+fastify.register((instance, opts, next) => {
+
+  instance.get('/auth/authorize', (request, reply) => {
+
+    // The url contains the query parameters and the path without the domain
+    reply.redirect(`${localHomeAssistant}${removeSpecialPrefixFromUrl(request.url)}`);
+  });
+
+
+  instance.all('*', async function (request, reply) {
+    await proxyHttpRequestToWs(request, reply);
+  });
+
+  next()
+
+  // This is done to secure ourself from anyone sending things to our server
+}, { prefix: urlPrefix })
 
 function proxyHttpRequestToWs(request, reply) {
   return new Promise((resolve, reject) => {
     let body = request.body;
-    if(request.headers['content-type'] === 'application/x-www-form-urlencoded') {
+    if (request.headers['content-type'] === 'application/x-www-form-urlencoded') {
       body = qs.stringify(body);
     }
     fastify.io.timeout(10000).emit(`request-${request.id}`, {
       id: request.id,
       method: request.method,
-      url: request.url,
+      url: removeSpecialPrefixFromUrl(request.url),
       path: request.routerPath,
       params: request.params,
       headers: request.headers,
@@ -167,77 +167,15 @@ function proxyHttpRequestToWs(request, reply) {
         reject(err);
         return;
       }
-      console.log('################'); // "got it"
-      console.log({ err, response }); // "got it"
 
       reply.status(response?.status ?? 500).headers(response?.headers ?? {}).send(response?.data ?? {});
+
       // response.
       resolve();
     });
   });
 }
 
-
-function declareRoutes() {
-  fastify.get('/auth/authorize', (request, reply) => {
-
-    // The url contains the query parameters and the path without the domain
-    reply.redirect(`${localHomeAssistant}${request.url}`);
-  });
-
-  fastify.post('/auth/token', async function (request, reply) {
-    await proxyHttpRequestToWs(request, reply);
-
-    console.log('Client IP', request.ip);
-    console.log('Method:', request.method)
-    console.log('URL: ', request.url);
-    console.log('Headers:', request.headers);
-    console.log('Body:', request.body);
-    console.log('Cookies:', request.cookies);
-
-
-    console.log('redirect to local home assistant');
-
-    // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
-    // reply.redirect(307, `${localHomeAssistant}${request.url}`);
-  });
-
-  fastify.post('/api/google_assistant', async function (request, reply) {
-    await proxyHttpRequestToWs(request, reply);
-
-    console.log('Client IP', request.ip);
-    console.log('Method:', request.method)
-    console.log('URL: ', request.url);
-    console.log('Headers:', request.headers);
-    console.log('Body:', request.body);
-    console.log('Cookies:', request.cookies);
-
-
-    console.log('redirect to local home assistant');
-
-    // status code 307 to maintain the POST method - https://github.com/fastify/fastify/issues/1049
-    // reply.redirect(307, `${localHomeAssistant}${request.url}`);
-  });
-
-
-
-
-  fastify.all('*', async function (request, reply) {
-    await proxyHttpRequestToWs(request, reply);
-
-    console.log('Client IP', request.ip);
-    console.log('Method:', request.method)
-    console.log('URL: ', request.url);
-    console.log('Headers:', request.headers);
-    console.log('Body:', request.body);
-    console.log('Cookies:', request.cookies);
-
-
-    // console.log('redirect to local home assistant');
-
-    // reply.redirect(`${localHomeAssistant}${request.url}`);
-  });
-}
 
 const port = process.env.PORT || 3000;
 
