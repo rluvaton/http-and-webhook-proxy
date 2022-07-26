@@ -5,6 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./src/index.js",
+    "client:dev": "node ./src/client.js",
+    "client:prod": "NODE_ENV=production node ./src/client.js",
+    "heroku:logs": "heroku logs -t -a http-and-webhook-proxy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,8 +25,10 @@
     "@fastify/formbody": "^7.0.1",
     "@fastify/http-proxy": "^8.2.1",
     "axios": "^0.27.2",
+    "axios-curlirize": "^1.3.7",
     "fastify": "^4.3.0",
     "fastify-socket.io": "^4.0.0",
+    "pino": "^8.3.0",
     "pino-pretty": "^8.1.0",
     "qs": "^6.11.0",
     "socket.io": "^4.5.1",

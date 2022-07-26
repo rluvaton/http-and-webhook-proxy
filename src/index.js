@@ -170,7 +170,7 @@ function proxyHttpRequestToWs(request, reply) {
       console.log('################'); // "got it"
       console.log({ err, response }); // "got it"
 
-      reply.status(response.status).headers(response.headers).send(response.data);
+      reply.status(response?.status ?? 500).headers(response?.headers ?? {}).send(response?.data ?? {});
       // response.
       resolve();
     });
