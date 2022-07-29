@@ -202,6 +202,6 @@ fastify.listen({ host: '0.0.0.0', port }, function (err) {
       return;
     }
     // socket.handshake.auth
-    socket.join(socket.handshake.auth);
+    socket.join(urlPrefix);
   })
 })
