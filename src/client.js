@@ -3,13 +3,18 @@ const Axios = require('axios');
 const { io } = require("socket.io-client");
 const curlirize = require('axios-curlirize');
 
-const localHomeAssistant = process.env.LOCAL_HOME_ASSASSIN_URL || 'http://homeassistant.local:8123'
+const localHomeAssistant = process.env.LOCAL_HOME_ASSISTANT_URL || 'http://homeassistant.local:8123'
 
 // TODO - in prod use wws (WebSocket + SSL)
 
 const remoteUrl = process.env.REMOTE_URL || process.env.NODE_ENV !== 'production' ? 'ws://localhost:3000' : 'ws://http-and-webhook-proxy.herokuapp.com'
 
-logger.info(process.env.NODE_ENV, 'Remote Server is on:', remoteUrl)
+logger.info({
+  env: process.env.NODE_ENV,
+  remoteUrl,
+  localHomeAssistant,
+})
+// logger.info(process.env.NODE_ENV, 'Remote Server is on:', remoteUrl)
 
 const axios = Axios.create({
   baseURL: localHomeAssistant,

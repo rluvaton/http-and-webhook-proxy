@@ -5,11 +5,11 @@ const urlPrefix = process.env.URL_PREFIX || '';
 
 const fastify = require('fastify')({
   logger: {
-    ...(process.env.NODE_ENV === 'production' ? {} : {
+  //  ...(process.env.NODE_ENV === 'production' ? {} : {
       transport: {
         target: 'pino-pretty',
       },
-    }),
+    //}),
   },
 });
 
