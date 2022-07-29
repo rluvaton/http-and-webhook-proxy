@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node ./src/index.js",
-    "client:dev": "node ./src/client.js",
-    "client:prod": "NODE_ENV=production node ./src/client.js",
+    "start": "node src/server/index.js",
+    "client:dev": "node ./src/client/index.js",
+    "client:prod": "NODE_ENV=production node ./src/client/index.js",
     "heroku:logs": "heroku logs -t -a http-and-webhook-proxy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -28,4 +28,4 @@ RUN npm ci --only=production
 COPY . .
 
 # Run the web service on container startup.
-CMD [ "dumb-init", "node", "src/client.js" ]
+CMD [ "dumb-init", "node", "src/client/index.js" ]

@@ -154,7 +154,9 @@ function proxyHttpRequestToWs(request, reply) {
     if (request.headers['content-type'] === 'application/x-www-form-urlencoded') {
       body = qs.stringify(body);
     }
-    fastify.io.timeout(10000).emit(`request-${request.id}`, {
+
+    // Only to the relevant room
+    fastify.io.to(urlPrefix).timeout(10000).emit(`request-${request.id}`, {
       id: request.id,
       method: request.method,
       url: removeSpecialPrefixFromUrl(request.url),
@@ -179,6 +181,8 @@ function proxyHttpRequestToWs(request, reply) {
 
 const port = process.env.PORT || 3000;
 
+
+
 // Run the server!
 fastify.listen({ host: '0.0.0.0', port }, function (err) {
   if (err) {
@@ -186,4 +190,18 @@ fastify.listen({ host: '0.0.0.0', port }, function (err) {
     process.exit(1)
   }
   // Server is now listening on ${address}
+
+  fastify.io.on('connection', (socket) => {
+    fastify.log.info(`Socket connected! - ${socket.id}`);
+
+    if(socket.handshake.auth?.token !== urlPrefix) {
+      fastify.log.warn(`Unknown token, disconnecting... [${socket.id}], token ${socket.handshake.auth?.token}`);
+
+      // Disconnect the socket
+      socket.disconnect();
+      return;
+    }
+    // socket.handshake.auth
+    socket.join(socket.handshake.auth);
+  })
 })
