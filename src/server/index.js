@@ -192,7 +192,7 @@ fastify.listen({ host: '0.0.0.0', port }, function (err) {
   // Server is now listening on ${address}
 
   fastify.io.on('connection', (socket) => {
-    fastify.log.info(`Socket connected! - ${socket.id}`);
+    fastify.log.info(`Socket connected! - ${socket.id} - token - ${socket.handshake.auth?.token}`);
 
     if(socket.handshake.auth?.token !== urlPrefix) {
       fastify.log.warn(`Unknown token, disconnecting... [${socket.id}], token ${socket.handshake.auth?.token}`);
