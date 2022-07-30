@@ -109,3 +109,5 @@ dist
 debug/
 
 .DS_Store
+
+.fleet

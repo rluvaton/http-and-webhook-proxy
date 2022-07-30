@@ -1,9 +1,11 @@
+# This will be alpine
 ARG BUILD_FROM
+
 FROM node:16.16-alpine AS node
 
-#ARG BUILD_FROM
 FROM $BUILD_FROM
 
+# Using this so we can have node 16 version
 COPY --from=node /usr/lib /usr/lib
 COPY --from=node /usr/local/share /usr/local/share
 COPY --from=node /usr/local/lib /usr/local/lib
@@ -15,17 +17,17 @@ COPY --from=node /usr/local/bin /usr/local/bin
 RUN apk add dumb-init
 
 ENV NODE_ENV production
-ENV LOCAL_HOME_ASSISTANT_URL http://host.docker.internal:8123
 
 WORKDIR /usr/src/app
 
+# Copy it before the code so Docker caching will help us build images faster
 COPY package*.json ./
 
-# Install production dependencies.
+# Install only production dependencies.
 RUN npm ci --only=production
 
 # Copy local code to the container image.
 COPY . .
 
-# Run the web service on container startup.
+
 CMD [ "dumb-init", "node", "src/client/index.js" ]

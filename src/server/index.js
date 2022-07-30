@@ -18,7 +18,7 @@ fastify.register(import('@fastify/rate-limit'), {
   timeWindow: '1 minute',
 })
 
-const localHomeAssistant = process.env.LOCAL_HOME_ASSASSIN_URL || 'http://homeassistant.local:8123'
+const localHomeAssistant = process.env.LOCAL_HOME_ASSISTANT_URL || 'http://homeassistant.local:8123'
 
 
 fastify.register(require('fastify-socket.io'), {
