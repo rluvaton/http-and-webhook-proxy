@@ -8,6 +8,7 @@ kill_timeout = 5
   builder = "heroku/buildpacks:20"
 
 [env]
+  PORT=8080
 
 [experimental]
   allowed_public_ports = []
