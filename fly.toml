@@ -4,6 +4,9 @@ app = "http-and-webhook-proxy"
 kill_signal = "SIGINT"
 kill_timeout = 5
 
+[build]
+  builder = "heroku/buildpacks:20"
+
 [env]
 
 [experimental]
