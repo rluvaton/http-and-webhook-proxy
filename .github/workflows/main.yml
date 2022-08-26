@@ -1,0 +1,21 @@
+name: Fly Deploy
+on:
+  push:
+    branches:
+      - 'main'
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+
+    # Don't run this workflow on forks
+    if: github.repository == 'rluvaton/http-and-webhook-proxy'
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
