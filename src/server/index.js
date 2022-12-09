@@ -2,6 +2,9 @@ const { Readable } = require('stream');
 const qs = require('qs');
 
 const urlPrefix = process.env.URL_PREFIX || '';
+const cookieDomain = process.env.DOMAIN || 'localhost'
+
+const urlPrefixCookieName = '__HostUrlPrefix';
 
 const fastify = require('fastify')({
   logger: {
@@ -130,23 +133,39 @@ function removeSpecialPrefixFromUrl(url) {
 
 fastify.register(require('@fastify/formbody'));
 
-fastify.register((instance, opts, next) => {
+fastify.register(require('@fastify/cookie'), {
+  // secret: process.env.COOKIE_SECRET, // for cookies signature
+  hook: 'onRequest', // set to false to disable cookie autoparsing or set autoparsing on any of the following hooks: 'onRequest', 'preParsing', 'preHandler', 'preValidation'. default: 'onRequest'
+  parseOptions: {}  // options for parsing cookies
+})
 
-  instance.get('/auth/authorize', (request, reply) => {
+fastify.addHook('preHandler', (request, reply, done) => {
+  if(request.cookies[urlPrefixCookieName] !== urlPrefix && !request.url.startsWith(`/${urlPrefix}`)) {
+    reply.code(404);
+    done(new Error('Not found'));
+    return;
+  }
 
-    // The url contains the query parameters and the path without the domain
-    reply.redirect(`${localHomeAssistant}${removeSpecialPrefixFromUrl(request.url)}`);
-  });
+  reply
+    .setCookie(urlPrefixCookieName, urlPrefix, {
+      domain: cookieDomain,
+      path: '/',
+      httpOnly: true,
+    })
+  done()
+})
 
 
-  instance.all('*', async function (request, reply) {
-    await proxyHttpRequestToWs(request, reply);
-  });
 
-  next()
+fastify.get('/auth/authorize', (request, reply) => {
+  // The url contains the query parameters and the path without the domain
+  reply.redirect(`${localHomeAssistant}${removeSpecialPrefixFromUrl(request.url)}`);
+});
 
-  // This is done to secure ourself from anyone sending things to our server
-}, { prefix: urlPrefix })
+
+fastify.all('*', async function (request, reply) {
+  await proxyHttpRequestToWs(request, reply);
+});
 
 function proxyHttpRequestToWs(request, reply) {
   return new Promise((resolve, reject) => {
