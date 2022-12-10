@@ -75,7 +75,21 @@ async function setupRoutes(fastify) {
             return;
           }
 
-          reply.status(response?.status ?? 500).headers(response?.headers ?? {}).send(response?.data ?? {});
+          reply.status(response?.status ?? 500).headers(response?.headers ?? {});
+
+          let data = response?.data ?? {};
+
+          // Should not be needed but for some reason it failed with unable to parse
+          if(typeof data === 'object') {
+            data = JSON.stringify(data);
+          }
+
+          try {
+            reply.send(data);
+          } catch (e) {
+            console.error('Failed sending data', e);
+            reject(e);
+          }
 
           resolve();
         });

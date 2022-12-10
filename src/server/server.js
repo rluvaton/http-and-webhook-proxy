@@ -36,7 +36,10 @@ async function setup() {
   });
 
 
-  await fastify.register(fastifySocketIo);
+  await fastify.register(fastifySocketIo, {
+    // 100 MB - this is needed as otherwise the client fail to send it back
+    maxHttpBufferSize: 1e8
+  });
 
   if (process.env.NODE_ENV !== 'production') {
     attachBodyLoggingHook(fastify);
