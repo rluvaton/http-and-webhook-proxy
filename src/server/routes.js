@@ -45,7 +45,6 @@ async function setupRoutes(fastify) {
     reply.redirect(`${localHomeAssistant}${removeSpecialPrefixFromUrl(request.url)}`);
   });
 
-
   fastify.all('*', async function (request, reply) {
     await proxyHttpRequestToWs(request, reply);
   });
@@ -69,6 +68,7 @@ async function setupRoutes(fastify) {
           params: request.params,
           headers: request.headers,
           body: body,
+          isMultiPart: request.isMultipart(),
         }, (err, [response]) => {
           if (err) {
             reject(err);

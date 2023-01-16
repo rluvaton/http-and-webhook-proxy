@@ -4,6 +4,8 @@ const fastifySocketIo = require('fastify-socket.io');
 const fastifyFormBody = require('@fastify/formbody');
 const fastifyCookiePlugin = require('@fastify/cookie');
 const fastifyMultiPart = require('@fastify/multipart');
+const symbols = require('fastify/lib/symbols');
+
 
 const { port, urlPrefix } = require('./config');
 const { setupRoutes } = require('./routes');
@@ -38,7 +40,7 @@ async function setup() {
 
   await fastify.register(fastifySocketIo, {
     // 100 MB - this is needed as otherwise the client fail to send it back
-    maxHttpBufferSize: 1e8
+    maxHttpBufferSize: 1e8,
   });
 
   if (process.env.NODE_ENV !== 'production') {
@@ -46,7 +48,7 @@ async function setup() {
   }
 
   await fastify.register(fastifyFormBody);
-  fastify.register(fastifyMultiPart)
+  await fastify.register(fastifyMultiPart, { addToBody: true })
 
   await fastify.register(fastifyCookiePlugin, {
     // secret: process.env.COOKIE_SECRET, // for cookies signature
@@ -55,6 +57,8 @@ async function setup() {
   });
 
   await setupRoutes(fastify);
+
+  return fastify;
 }
 
 async function run() {

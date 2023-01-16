@@ -1,6 +1,7 @@
 const logger = require('../common/logger');
 const Axios = require('axios');
 const { io } = require("socket.io-client");
+const FormData = require('form-data');
 const { loadConfig } = require('./config-home-assistant');
 
 
@@ -58,9 +59,28 @@ async function run() {
     // Cause 400 error
     delete req.headers['x-forwarded-for'];
 
+    let body = req.body;
+
+    if(req.isMultiPart) {
+      const multiPartBody = new FormData();
+
+      Object.entries(body).forEach(([key, value]) => {
+        // TODO - change this
+        // if(key === 'client_id' && value === 'http://localhost:3000/') {
+        //   multiPartBody.append(key, localHomeAssistant);
+        //   return;
+        // }
+        multiPartBody.append(key, value);
+      });
+
+      body = multiPartBody;
+
+      Object.assign(req.headers, multiPartBody.getHeaders());
+    }
+
     axios.request({
       method: req.method,
-      data: req.body,
+      data: body,
       headers: req.headers,
       params: req.params,
       url: req.url,
@@ -76,7 +96,7 @@ async function run() {
         data: res.data,
       })
     }).catch((error) => {
-      logger.error({ response: error.response, error }, 'Some error in the response');
+      logger.error({ response: error.response?.data, headers: error.response?.headers, status: error.response?.status, error }, 'Some error in the response');
 
       cb({
         status: error.response.status,
