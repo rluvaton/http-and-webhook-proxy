@@ -62,10 +62,16 @@ async function setupRoutes(fastify) {
   })
 
 
-  fastify.get('/auth/authorize', (request, reply) => {
-    // The url contains the query parameters and the path without the domain
-    reply.redirect(`${localHomeAssistant}${removeSpecialPrefixFromUrl(request.url)}`);
-  });
+  // fastify.get('/auth/authorize', (request, reply) => {
+  //   // const url = removeSpecialPrefixFromUrl(request.url);
+  //   // const searchParams = new URLSearchParams(url.split('?')[1]);
+  //   // if(searchParams.has('client_id')) {
+  //   //   searchParams.set('client_id', localHomeAssistant + '/');
+  //   // }
+  //   // // The url contains the query parameters and the path without the domain
+  //   // reply.redirect(`${localHomeAssistant}/auth/authorize?${searchParams.toString()}`);
+  //   reply.redirect(`${localHomeAssistant}${removeSpecialPrefixFromUrl(request.url)}`);
+  // });
 
   fastify.all('*', async function (request, reply) {
     await proxyHttpRequestToWs(request, reply);
