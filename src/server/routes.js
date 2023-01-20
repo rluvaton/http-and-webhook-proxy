@@ -20,23 +20,23 @@ function removeSpecialPrefixFromUrl(url) {
 async function setupRoutes(fastify) {
 
   // Made all requests to either start with the url prefix or have a cookie with that
-  fastify.addHook('preHandler', (request, reply, done) => {
-    if (request.cookies[urlPrefixCookieName] !== urlPrefix && !request.url.startsWith(`/${urlPrefix}`)) {
-      console.log('URL not found', request.url);
-      reply.code(404);
-      done(new Error(request.url + ': Not found'));
-      return;
-    }
-
-    reply
-      .setCookie(urlPrefixCookieName, urlPrefix, {
-        domain: cookieDomain,
-        path: '/',
-        httpOnly: true,
-      });
-
-    done()
-  });
+  // fastify.addHook('preHandler', (request, reply, done) => {
+  //   if (request.cookies[urlPrefixCookieName] !== urlPrefix && !request.url.startsWith(`/${urlPrefix}`)) {
+  //     console.log('URL not found', request.url);
+  //     reply.code(404);
+  //     done(new Error(request.url + ': Not found'));
+  //     return;
+  //   }
+  //
+  //   reply
+  //     .setCookie(urlPrefixCookieName, urlPrefix, {
+  //       domain: cookieDomain,
+  //       path: '/',
+  //       httpOnly: true,
+  //     });
+  //
+  //   done()
+  // });
 
   fastify.register(async function (fastify) {
     fastify.get('/api/websocket', { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
