@@ -38,28 +38,9 @@ async function setupRoutes(fastify) {
     done()
   });
 
-  fastify.register(async function (fastify) {
-    fastify.get('/api/websocket', { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
 
-      // Listen to web socket events from the connected web socket
-      // TODO - add catch
-      // TODO - add comment why we do this without await - https://www.npmjs.com/package/@fastify/websocket using event handlers
-      fastify.io.to(urlPrefix).fetchSockets()
-        .then((sockets) => {
-          sockets.map(s => s.on('ws-message', (data) => {
-            let serverToClientData = data.toString();
-            console.log('server to client data', serverToClientData);
-            connection.socket.send(serverToClientData);
-          }));
-        })
-
-      connection.socket.on('message', message => {
-        console.log('client to server data', message);
-
-        proxyWsToWs(req, message)
-      })
-    })
-  })
+  setupWsRoute(fastify, '/api/websocket');
+  setupWsRoute(fastify, `/${urlPrefix}/api/websocket`);
 
 
   // fastify.get('/auth/authorize', (request, reply) => {
@@ -74,69 +55,97 @@ async function setupRoutes(fastify) {
   // });
 
   fastify.all('*', async function (request, reply) {
-    await proxyHttpRequestToWs(request, reply);
+    await proxyHttpRequestToWs(fastify, request, reply);
   });
 
-  function proxyHttpRequestToWs(request, reply) {
-    return new Promise((resolve, reject) => {
-      let body = request.body;
 
-      // Only to the relevant room
-      fastify.io
-        .to(urlPrefix)
-        .timeout(10000)
-        .emit(`http-${request.id}`, {
-          id: request.id,
-          method: request.method,
-          url: removeSpecialPrefixFromUrl(request.url),
-          path: request.routerPath,
-          params: request.params,
-          headers: request.headers,
-          body: body,
-        }, (err, [response]) => {
-          if (err) {
-            reject(err);
-            return;
-          }
 
-          reply.status(response?.status ?? 500).headers(response?.headers ?? {});
+}
 
-          let data = response?.data ?? {};
+function proxyHttpRequestToWs(fastify, request, reply) {
+  return new Promise((resolve, reject) => {
+    let body = request.body;
 
-          // Should not be needed but for some reason it failed with unable to parse
-          if (typeof data === 'object') {
-            data = JSON.stringify(data);
-          }
-
-          try {
-            reply.send(data);
-          } catch (e) {
-            console.error('Failed sending data', e);
-            reject(e);
-          }
-
-          resolve();
-        });
-    });
-  }
-
-  function proxyWsToWs(req, body) {
     // Only to the relevant room
     fastify.io
       .to(urlPrefix)
       .timeout(10000)
-      .emit(`ws-${req.id}`, {
-        id: req.id,
-        url: removeSpecialPrefixFromUrl(req.url),
-        path: req.routerPath,
-        params: req.params,
-        headers: req.headers,
+      .emit(`http-${request.id}`, {
+        id: request.id,
+        method: request.method,
+        url: removeSpecialPrefixFromUrl(request.url),
+        path: request.routerPath,
+        params: request.params,
+        headers: request.headers,
         body: body,
-      });
-  }
+      }, (err, [response]) => {
+        if (err) {
+          reject(err);
+          return;
+        }
 
+        reply.status(response?.status ?? 500).headers(response?.headers ?? {});
+
+        let data = response?.data ?? {};
+
+        // Should not be needed but for some reason it failed with unable to parse
+        if (typeof data === 'object') {
+          data = JSON.stringify(data);
+        }
+
+        try {
+          reply.send(data);
+        } catch (e) {
+          console.error('Failed sending data', e);
+          reject(e);
+        }
+
+        resolve();
+      });
+  });
+}
+
+
+function setupWsRoute(fastify, route) {
+  fastify.get(route, { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
+
+    // Listen to web socket events from the connected web socket
+    // TODO - add catch
+    // TODO - add comment why we do this without await - https://www.npmjs.com/package/@fastify/websocket using event handlers
+    fastify.io.to(urlPrefix).fetchSockets()
+      .then((sockets) => {
+        sockets.map(s => s.on('ws-message', (data) => {
+          let serverToClientData = data.toString();
+          console.log('server to client data', serverToClientData);
+          connection.socket.send(serverToClientData);
+        }));
+      })
+
+    connection.socket.on('message', message => {
+      console.log('client to server data', message);
+
+      proxyWsToWs(req, message)
+    })
+  })
 
 }
+
+
+function proxyWsToWs(req, body) {
+  // Only to the relevant room
+  fastify.io
+    .to(urlPrefix)
+    .timeout(10000)
+    .emit(`ws-${req.id}`, {
+      id: req.id,
+      url: removeSpecialPrefixFromUrl(req.url),
+      path: req.routerPath,
+      params: req.params,
+      headers: req.headers,
+      body: body,
+    });
+}
+
 
 module.exports = {
   setupRoutes,
