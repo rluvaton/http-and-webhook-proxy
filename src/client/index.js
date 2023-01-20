@@ -98,14 +98,13 @@ function isWsAuthMessage(message) {
     // If first time auth and already had connection it's mean we
     // disconnected and need to restart the socket
     if (messageAsJson.type === 'auth') {
-      // logger.info('Received auth message why the socket open which means that the server disconnected');
 
       return true;
     }
   } catch (e) {
     // Ignore...
   }
-    return false;
+  return false;
 }
 
 function startListening(req) {
@@ -135,12 +134,18 @@ function startListening(req) {
 
       if (ws.buffer.length) {
         logger.info('Got messages in the buffer');
-        ws.buffer.forEach(item => {
-          if(isWsAuthMessage(item)) {
-            ws.authenticated = true;
-          }
-          ws.socket.send(item);
-        })
+        try {
+          ws.buffer.forEach(item => {
+            if (isWsAuthMessage(item)) {
+              ws.authenticated = true;
+            }
+
+            ws.socket.send(item);
+          })
+        } catch (e) {
+          logger.error(e, 'failed to send message to web socket');
+          return false;
+        }
       }
 
       ws.open = true;
@@ -171,10 +176,11 @@ function startListening(req) {
     ws.buffer.push(messageToSend);
     return;
   } else {
-    if(ws.authenticated && isWsAuthMessage(messageToSend)) {
+    if (ws.authenticated && isWsAuthMessage(messageToSend)) {
       logger.info('Received auth message why the socket open which means that the server disconnected');
 
       ws.socket.terminate();
+      ws.socket.eventNames().forEach(eventName => ws.socket.removeAllListeners(eventName))
       ws.socket = undefined;
       ws.open = undefined;
       ws.authenticated = false;

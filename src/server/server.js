@@ -106,9 +106,6 @@ async function run() {
       return;
     }
     socket.join(urlPrefix);
-
-    // TODO - fix this hack
-    fastify.io.s = socket;
   });
 }
 

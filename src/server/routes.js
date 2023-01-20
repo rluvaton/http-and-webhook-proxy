@@ -41,12 +41,17 @@ async function setupRoutes(fastify) {
   fastify.register(async function (fastify) {
     fastify.get('/api/websocket', { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
 
-      // TODO - fix this patch
-      fastify.io.s.on('ws-message', (data) => {
-        let serverToClientData = data.toString();
-        console.log('server to client data', serverToClientData);
-        connection.socket.send(serverToClientData);
-      });
+      // Listen to web socket events from the connected web socket
+      // TODO - add catch
+      // TODO - add comment why we do this without await - https://www.npmjs.com/package/@fastify/websocket using event handlers
+      fastify.io.to(urlPrefix).fetchSockets()
+        .then((sockets) => {
+          sockets.map(s => s.on('ws-message', (data) => {
+            let serverToClientData = data.toString();
+            console.log('server to client data', serverToClientData);
+            connection.socket.send(serverToClientData);
+          }));
+        })
 
       connection.socket.on('message', message => {
         console.log('client to server data', message);
