@@ -50,10 +50,10 @@ async function setup() {
     // 100 MB - this is needed as otherwise the client fail to send it back
     maxHttpBufferSize: 1e8,
   });
-
-  if (process.env.NODE_ENV !== 'production') {
+  //
+  // if (process.env.NODE_ENV !== 'production') {
     attachBodyLoggingHook(fastify);
-  }
+  // }
 
   await fastify.register(fastifyCookiePlugin, {
     // secret: process.env.COOKIE_SECRET, // for cookies signature
