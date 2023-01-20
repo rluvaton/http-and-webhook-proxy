@@ -1,15 +1,13 @@
 const Fastify = require('fastify')
 const rateLimitPlugin = require('@fastify/rate-limit');
 const fastifySocketIo = require('fastify-socket.io');
-const fastifyFormBody = require('@fastify/formbody');
 const fastifyCookiePlugin = require('@fastify/cookie');
-const fastifyMultiPart = require('@fastify/multipart');
-const symbols = require('fastify/lib/symbols');
-
+const fastifyWebsocketPlugin = require('@fastify/websocket');
 
 const { port, urlPrefix } = require('./config');
 const { setupRoutes } = require('./routes');
 const { attachBodyLoggingHook } = require('./body-logging-hook');
+const { isAuthorized } = require('./authorization');
 
 /**
  * @type FastifyInstance
@@ -32,11 +30,21 @@ async function setup() {
     },
   });
 
+  // Get raw data so we won't get 500 errors
+  fastify.addContentTypeParser('*', function (request, payload, done) {
+    let data = Buffer.from([])
+    payload.on('data', chunk => {
+      data = Buffer.concat([data, chunk])
+    })
+    payload.on('end', () => {
+      done(null, data);
+    })
+  });
+
   await fastify.register(rateLimitPlugin, {
     max: 1000,
     timeWindow: '1 minute',
   });
-
 
   await fastify.register(fastifySocketIo, {
     // 100 MB - this is needed as otherwise the client fail to send it back
@@ -47,13 +55,25 @@ async function setup() {
     attachBodyLoggingHook(fastify);
   }
 
-  await fastify.register(fastifyFormBody);
-  await fastify.register(fastifyMultiPart, { addToBody: true })
-
   await fastify.register(fastifyCookiePlugin, {
     // secret: process.env.COOKIE_SECRET, // for cookies signature
-    hook: 'onRequest', // set to false to disable cookie autoparsing or set autoparsing on any of the following hooks: 'onRequest', 'preParsing', 'preHandler', 'preValidation'. default: 'onRequest'
+    hook: 'preHandler', // set to false to disable cookie autoparsing or set autoparsing on any of the following hooks: 'onRequest', 'preParsing', 'preHandler', 'preValidation'. default: 'onRequest'
     parseOptions: {},  // options for parsing cookies
+  });
+
+  await fastify.register(fastifyWebsocketPlugin, {
+    options: {
+      verifyClient({ req }, next) {
+        next(true);
+        return;
+        if(!isAuthorized(req)) {
+          return next(false);
+        }
+
+        req.log.info('WebSocket client verified!');
+        next(true);
+      },
+    },
   });
 
   await setupRoutes(fastify);
@@ -85,8 +105,10 @@ async function run() {
       socket.disconnect();
       return;
     }
-    // socket.handshake.auth
     socket.join(urlPrefix);
+
+    // TODO - fix this hack
+    fastify.io.s = socket;
   });
 }
 

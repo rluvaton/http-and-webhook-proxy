@@ -1,6 +1,4 @@
 const { urlPrefixCookieName, urlPrefix, cookieDomain, localHomeAssistant } = require('./config');
-const qs = require('qs');
-
 
 function removeSpecialPrefixFromUrl(url) {
   if (urlPrefix === '') {
@@ -24,8 +22,9 @@ async function setupRoutes(fastify) {
   // Made all requests to either start with the url prefix or have a cookie with that
   fastify.addHook('preHandler', (request, reply, done) => {
     if (request.cookies[urlPrefixCookieName] !== urlPrefix && !request.url.startsWith(`/${urlPrefix}`)) {
+      console.log('URL not found', request.url);
       reply.code(404);
-      done(new Error('Not found'));
+      done(new Error(request.url + ': Not found'));
       return;
     }
 
@@ -38,6 +37,24 @@ async function setupRoutes(fastify) {
 
     done()
   });
+
+  fastify.register(async function (fastify) {
+    fastify.get('/api/websocket', { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
+
+      // TODO - fix this patch
+      fastify.io.s.on('ws-message', (data) => {
+        let serverToClientData = data.toString();
+        console.log('server to client data', serverToClientData);
+        connection.socket.send(serverToClientData);
+      });
+
+      connection.socket.on('message', message => {
+        console.log('client to server data', message);
+
+        proxyWsToWs(req, message)
+      })
+    })
+  })
 
 
   fastify.get('/auth/authorize', (request, reply) => {
@@ -52,15 +69,12 @@ async function setupRoutes(fastify) {
   function proxyHttpRequestToWs(request, reply) {
     return new Promise((resolve, reject) => {
       let body = request.body;
-      if (request.headers['content-type'] === 'application/x-www-form-urlencoded') {
-        body = qs.stringify(body);
-      }
 
       // Only to the relevant room
       fastify.io
         .to(urlPrefix)
         .timeout(10000)
-        .emit(`request-${request.id}`, {
+        .emit(`http-${request.id}`, {
           id: request.id,
           method: request.method,
           url: removeSpecialPrefixFromUrl(request.url),
@@ -68,7 +82,6 @@ async function setupRoutes(fastify) {
           params: request.params,
           headers: request.headers,
           body: body,
-          isMultiPart: request.isMultipart(),
         }, (err, [response]) => {
           if (err) {
             reject(err);
@@ -80,7 +93,7 @@ async function setupRoutes(fastify) {
           let data = response?.data ?? {};
 
           // Should not be needed but for some reason it failed with unable to parse
-          if(typeof data === 'object') {
+          if (typeof data === 'object') {
             data = JSON.stringify(data);
           }
 
@@ -94,6 +107,21 @@ async function setupRoutes(fastify) {
           resolve();
         });
     });
+  }
+
+  function proxyWsToWs(req, body) {
+    // Only to the relevant room
+    fastify.io
+      .to(urlPrefix)
+      .timeout(10000)
+      .emit(`ws-${req.id}`, {
+        id: req.id,
+        url: removeSpecialPrefixFromUrl(req.url),
+        path: req.routerPath,
+        params: req.params,
+        headers: req.headers,
+        body: body,
+      });
   }
 
 
