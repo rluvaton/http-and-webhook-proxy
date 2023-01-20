@@ -12,6 +12,8 @@ function removeSpecialPrefixFromUrl(url) {
   return url;
 }
 
+const TIMEOUT = 40_000;
+
 /**
  *
  * @param {FastifyInstance} fastify
@@ -69,7 +71,7 @@ function proxyHttpRequestToWs(fastify, request, reply) {
     // Only to the relevant room
     fastify.io
       .to(urlPrefix)
-      .timeout(10000)
+      .timeout(TIMEOUT)
       .emit(`http-${request.id}`, {
         id: request.id,
         method: request.method,
@@ -135,7 +137,7 @@ function proxyWsToWs(req, body) {
   // Only to the relevant room
   fastify.io
     .to(urlPrefix)
-    .timeout(10000)
+    .timeout(TIMEOUT)
     .emit(`ws-${req.id}`, {
       id: req.id,
       url: removeSpecialPrefixFromUrl(req.url),
