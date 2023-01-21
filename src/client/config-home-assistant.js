@@ -21,13 +21,7 @@ async function loadConfig() {
       logger.error({ path: CONFIG_FILE, error }, 'Could not parse options file');
 
       // TODO - return this
-      // throw error;
-      config = {
-        "localHomeAssistantUrl": "http://homeassistant.local:8123",
-        "remoteWsUrl": "ws://192.168.1.10:3000",
-        "socketToken": "dsaa",
-        "logLevel": "debug"
-      };
+      throw error;
 
     }
   }
