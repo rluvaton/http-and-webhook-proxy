@@ -52,7 +52,7 @@ async function setup() {
   });
   //
   // if (process.env.NODE_ENV !== 'production') {
-    attachBodyLoggingHook(fastify);
+  attachBodyLoggingHook(fastify);
   // }
 
   await fastify.register(fastifyCookiePlugin, {
@@ -66,7 +66,7 @@ async function setup() {
       verifyClient({ req }, next) {
         next(true);
         return;
-        if(!isAuthorized(req)) {
+        if (!isAuthorized(req)) {
           return next(false);
         }
 

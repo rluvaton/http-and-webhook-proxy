@@ -1,5 +1,7 @@
 const { urlPrefixCookieName, urlPrefix, cookieDomain, localHomeAssistant } = require('./config');
 
+const {randomUUID} = require('node:crypto');
+
 function removeSpecialPrefixFromUrl(url) {
   if (urlPrefix === '') {
     return url;
@@ -110,6 +112,18 @@ function proxyHttpRequestToWs(fastify, request, reply) {
 
 function setupWsRoute(fastify, route) {
   fastify.get(route, { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
+    const clientId = randomUUID();
+
+    proxyWsToWs(fastify, req, {}, clientId);
+    connection.on('close', () => {
+      console.log('connection closed');
+    });
+    connection.socket.on('close', () => {
+      console.log('socket closed');
+      closeWebSockets(fastify, clientId);
+    });
+
+    startWs(fastify, clientId);
 
     // Listen to web socket events from the connected web socket
     // TODO - add catch
@@ -126,19 +140,20 @@ function setupWsRoute(fastify, route) {
     connection.socket.on('message', message => {
       console.log('client to server data', message);
 
-      proxyWsToWs(fastify, req, message)
+      proxyWsToWs(fastify, req, message, clientId);
     })
   })
 
 }
 
 
-function proxyWsToWs(fastify, req, body) {
+function proxyWsToWs(fastify, req, body, clientId) {
   // Only to the relevant room
   fastify.io
     .to(urlPrefix)
     .timeout(TIMEOUT)
     .emit(`ws-${req.id}`, {
+      clientId,
       id: req.id,
       url: removeSpecialPrefixFromUrl(req.url),
       path: req.routerPath,
@@ -147,7 +162,25 @@ function proxyWsToWs(fastify, req, body) {
       body: body,
     });
 }
+function startWs(fastify, clientId) {
+  // Only to the relevant room
+  fastify.io
+    .to(urlPrefix)
+    .timeout(TIMEOUT)
+    .emit(`ws-open`, {
+      clientId,
+    });
+}
 
+function closeWebSockets(fastify, clientId) {
+  // Only to the relevant room
+  fastify.io
+    .to(urlPrefix)
+    .timeout(TIMEOUT)
+    .emit(`ws-close`, {
+      clientId
+    });
+}
 
 module.exports = {
   setupRoutes,
