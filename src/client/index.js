@@ -223,9 +223,9 @@ function proxyHttpRequest(req) {
     }, 'Some error in the response');
 
     return {
-      status: error.response.status,
-      headers: error.response.headers,
-      data: error.response.data,
+      status: error.response?.status,
+      headers: error.response?.headers,
+      data: error.response?.data,
     }
   })
 }

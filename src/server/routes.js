@@ -126,14 +126,14 @@ function setupWsRoute(fastify, route) {
     connection.socket.on('message', message => {
       console.log('client to server data', message);
 
-      proxyWsToWs(req, message)
+      proxyWsToWs(fastify, req, message)
     })
   })
 
 }
 
 
-function proxyWsToWs(req, body) {
+function proxyWsToWs(fastify, req, body) {
   // Only to the relevant room
   fastify.io
     .to(urlPrefix)
