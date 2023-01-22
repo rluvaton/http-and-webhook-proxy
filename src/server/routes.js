@@ -114,16 +114,15 @@ function setupWsRoute(fastify, route) {
   fastify.get(route, { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
     const clientId = randomUUID();
 
-    proxyWsToWs(fastify, req, {}, clientId);
     connection.on('close', () => {
       console.log('connection closed');
     });
     connection.socket.on('close', () => {
       console.log('socket closed');
-      closeWebSockets(fastify, clientId);
+      closeWebSocket(fastify, clientId);
     });
 
-    startWs(fastify, clientId);
+    startWs(fastify, route, clientId);
 
     // Listen to web socket events from the connected web socket
     // TODO - add catch
@@ -162,17 +161,18 @@ function proxyWsToWs(fastify, req, body, clientId) {
       body: body,
     });
 }
-function startWs(fastify, clientId) {
+function startWs(fastify, url, clientId) {
   // Only to the relevant room
   fastify.io
     .to(urlPrefix)
     .timeout(TIMEOUT)
     .emit(`ws-open`, {
       clientId,
+      url: removeSpecialPrefixFromUrl(url),
     });
 }
 
-function closeWebSockets(fastify, clientId) {
+function closeWebSocket(fastify, clientId) {
   // Only to the relevant room
   fastify.io
     .to(urlPrefix)
