@@ -1,6 +1,6 @@
 const { urlPrefixCookieName, urlPrefix, cookieDomain, localHomeAssistant } = require('./config');
 
-const {randomUUID} = require('node:crypto');
+const { randomUUID } = require('node:crypto');
 
 function removeSpecialPrefixFromUrl(url) {
   if (urlPrefix === '') {
@@ -46,24 +46,9 @@ async function setupRoutes(fastify) {
   setupWsRoute(fastify, '/api/websocket');
   setupWsRoute(fastify, `/${urlPrefix}/api/websocket`);
 
-
-  // fastify.get('/auth/authorize', (request, reply) => {
-  //   // const url = removeSpecialPrefixFromUrl(request.url);
-  //   // const searchParams = new URLSearchParams(url.split('?')[1]);
-  //   // if(searchParams.has('client_id')) {
-  //   //   searchParams.set('client_id', localHomeAssistant + '/');
-  //   // }
-  //   // // The url contains the query parameters and the path without the domain
-  //   // reply.redirect(`${localHomeAssistant}/auth/authorize?${searchParams.toString()}`);
-  //   reply.redirect(`${localHomeAssistant}${removeSpecialPrefixFromUrl(request.url)}`);
-  // });
-
   fastify.all('*', async function (request, reply) {
     await proxyHttpRequestToWs(fastify, request, reply);
   });
-
-
-
 }
 
 function proxyHttpRequestToWs(fastify, request, reply) {
@@ -90,12 +75,10 @@ function proxyHttpRequestToWs(fastify, request, reply) {
 
         reply.status(response?.status ?? 500).headers(response?.headers ?? {});
 
-        let data = response?.data ?? {};
+        warnInCaseResponseDataIsBufferAndNoContentTypeHeader(response);
 
-        // Should not be needed but for some reason it failed with unable to parse
-        if (typeof data === 'object') {
-          data = JSON.stringify(data);
-        }
+        // The response data should be a buffer, this shouldn't be a problem as the response header should contain content type
+        const data = response?.data || '{}';
 
         try {
           reply.send(data);
@@ -109,6 +92,25 @@ function proxyHttpRequestToWs(fastify, request, reply) {
   });
 }
 
+function warnInCaseResponseDataIsBufferAndNoContentTypeHeader(response) {
+  if (!response) {
+    return;
+  }
+
+  if (!Buffer.isBuffer(response.data)) {
+    return;
+  }
+
+  const contentTypeHeaders = Object.entries(response.headers || {})
+    .filter(([header]) => header.toLowerCase() === 'content-type')
+    .map(([_, value]) => value);
+
+  if (contentTypeHeaders.length) {
+    return;
+  }
+
+  console.warn(`Content-Type header is missing and the response data is a buffer, setting Content-Type to be 'application/octet-stream'`, { response })
+}
 
 function setupWsRoute(fastify, route) {
   fastify.get(route, { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
@@ -161,6 +163,7 @@ function proxyWsToWs(fastify, req, body, clientId) {
       body: body,
     });
 }
+
 function startWs(fastify, url, clientId) {
   // Only to the relevant room
   fastify.io
@@ -178,7 +181,7 @@ function closeWebSocket(fastify, clientId) {
     .to(urlPrefix)
     .timeout(TIMEOUT)
     .emit(`ws-close`, {
-      clientId
+      clientId,
     });
 }
 
