@@ -133,13 +133,13 @@ function setupWsRoute(fastify, route) {
       .then((sockets) => {
         sockets.map(s => s.on('ws-message', (data) => {
           let serverToClientData = data.toString();
-          console.log('server to client data', serverToClientData);
+          console.log('new server to client data');
           connection.socket.send(serverToClientData);
         }));
       })
 
     connection.socket.on('message', message => {
-      console.log('client to server data', message);
+      console.log('new client to server data');
 
       proxyWsToWs(fastify, req, message, clientId);
     })
