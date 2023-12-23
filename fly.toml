@@ -10,6 +10,10 @@ kill_timeout = 5
 [env]
   PORT=8080
   DOMAIN = "http-and-webhook-proxy.fly.dev"
+  PRETTY_LOGS = 'true'
+  LOG_REQUESTS = 'true'
+  # Uncomment the next line to enable debug logging.
+  # LOG_LEVEL = "debug"
 
 [experimental]
   allowed_public_ports = []
