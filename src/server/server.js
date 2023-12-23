@@ -4,7 +4,7 @@ const fastifySocketIo = require('fastify-socket.io');
 const fastifyCookiePlugin = require('@fastify/cookie');
 const fastifyWebsocketPlugin = require('@fastify/websocket');
 
-const {port, urlPrefix, prettyLogs, logRequests} = require('./config');
+const {port, urlPrefix, prettyLogs, logBodyRequests} = require('./config');
 const {setupRoutes} = require('./routes');
 const {attachBodyLoggingHook} = require('./body-logging-hook');
 const {isAuthorized} = require('./authorization');
@@ -50,7 +50,7 @@ async function setup() {
         // 100 MB - this is needed as otherwise the client fail to send it back
         maxHttpBufferSize: 1e8,
     });
-    if (logRequests) {
+    if (logBodyRequests) {
         attachBodyLoggingHook(fastify);
     }
 

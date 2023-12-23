@@ -7,5 +7,5 @@ module.exports = {
   port: process.env.PORT || 3000,
 
   prettyLogs: process.env.PRETTY_LOGS === 'true',
-  logRequests: process.env.LOG_REQUESTS === 'true'
+  logBodyRequests: process.env.LOG_BODY_REQUESTS === 'true'
 };
