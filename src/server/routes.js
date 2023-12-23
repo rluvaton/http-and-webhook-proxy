@@ -1,4 +1,4 @@
-const { urlPrefixCookieName, urlPrefix, cookieDomain, localHomeAssistant } = require('./config');
+const { urlPrefixCookieName, urlPrefix, cookieDomain } = require('./config');
 
 const { randomUUID } = require('node:crypto');
 
