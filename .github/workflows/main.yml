@@ -13,7 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     # Don't run this workflow on forks
-    if: github.repository == 'rluvaton/http-and-webhook-proxy'
+    # if: github.repository == 'rluvaton/http-and-webhook-proxy'
+
+    # Disable deployments
+    if: false
 
     steps:
       - uses: actions/checkout@v2
